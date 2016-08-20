@@ -80,6 +80,11 @@
 				}
 			},
 			{
+				"command": "pub.test",
+				"title": "Pub Test",
+				"category": "Dart"
+			},
+			{
 				"command": "dart.organizeDirectives",
 				"title": "Organize Directives",
 				"category": "Dart"

@@ -23,7 +23,9 @@ export class SdkCommands {
 		context.subscriptions.push(vs.commands.registerCommand("pub.upgrade", selection => {
 			this.runPub("upgrade", selection);
 		}));
-
+		context.subscriptions.push(vs.commands.registerCommand("pub.test", selection => {
+			this.runPub("run test", selection);
+		}));
 		// Hook saving pubspec to run pub.get.
 		context.subscriptions.push(vs.workspace.onDidSaveTextDocument(td => {
 			if (config.runPubGetOnPubspecChanges && path.basename(td.fileName).toLowerCase() == "pubspec.yaml")
