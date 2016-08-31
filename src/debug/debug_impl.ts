@@ -35,6 +35,7 @@ export class DartDebugSession extends DebugSession {
 	private cwd: string;
 	private sdkPath: string;
 	private dartPath: string;
+	private debug: boolean = false;
 	private childProcess: child_process.ChildProcess;
 	private processExited: boolean = false;
 	observatory: ObservatoryConnection;
@@ -73,9 +74,9 @@ export class DartDebugSession extends DebugSession {
 
 		this.sendResponse(response);
 
-		let debug = !args.noDebug;
+		this.debug = !args.noDebug;
 		let appArgs = [];
-		if (debug) {
+		if (this.debug) {
 			appArgs.push("--enable-vm-service:0");
 			appArgs.push("--pause_isolates_on_start=true");
 		}
@@ -83,10 +84,16 @@ export class DartDebugSession extends DebugSession {
 		if (args.args)
 			appArgs = appArgs.concat(args.args);
 
-		let process = child_process.spawn(this.dartPath, appArgs, {
-			cwd: args.cwd
-		});
+		this.launchStandalone(appArgs, args.cwd);
 
+		if (!this.debug)
+			this.sendEvent(new InitializedEvent());
+	}
+
+	private launchStandalone(args: string[], cwd: string) {
+		let process = child_process.spawn(this.dartPath, args, {
+			cwd: cwd
+		});
 		this.childProcess = process;
 
 		process.stdout.setEncoding("utf8");
@@ -117,9 +124,6 @@ export class DartDebugSession extends DebugSession {
 				this.sendEvent(new OutputEvent(`finished (${signal ? `${signal}`.toLowerCase() : code})`));
 			this.sendEvent(new TerminatedEvent());
 		});
-
-		if (!debug)
-			this.sendEvent(new InitializedEvent());
 	}
 
 	private initObservatory(uri: string) {
