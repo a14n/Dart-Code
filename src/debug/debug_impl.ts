@@ -23,11 +23,14 @@ import {
 // restartFrameRequest(response: DebugProtocol.RestartFrameResponse, args: DebugProtocol.RestartFrameArguments): void;
 // completionsRequest(response: DebugProtocol.CompletionsResponse, args: DebugProtocol.CompletionsArguments): void;
 
+const RUNINTERMINAL_TIMEOUT = 3000;
+
 export interface DartLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	sdkPath: string;
 	program: string;
 	args: Array<string>;
+	env?: { [key: string]: string; };
 }
 
 export class DartDebugSession extends DebugSession {
@@ -36,6 +39,7 @@ export class DartDebugSession extends DebugSession {
 	private sdkPath: string;
 	private dartPath: string;
 	private debug: boolean = false;
+	private supportsRunInTerminal: boolean = false;
 	private childProcess: child_process.ChildProcess;
 	private processExited: boolean = false;
 	observatory: ObservatoryConnection;
@@ -60,6 +64,7 @@ export class DartDebugSession extends DebugSession {
 				{ filter: "Unhandled", label: "Uncaught Exceptions", default: true }
 			]
 		};
+		this.supportsRunInTerminal = args.supportsRunInTerminalRequest === true;
 		this.sendResponse(response);
 	}
 
@@ -77,17 +82,46 @@ export class DartDebugSession extends DebugSession {
 		this.debug = !args.noDebug;
 		let appArgs = [];
 		if (this.debug) {
-			appArgs.push("--enable-vm-service:0");
+			appArgs.push("--enable-vm-service");
 			appArgs.push("--pause_isolates_on_start=true");
 		}
 		appArgs.push(this.sourceFile);
 		if (args.args)
 			appArgs = appArgs.concat(args.args);
 
-		this.launchStandalone(appArgs, args.cwd);
+		if (this.supportsRunInTerminal)
+			this.launchInTerminal(appArgs, args.cwd, args.env);
+		else
+			// TODO: See if we actually need this; or if >= 1.5 is guaranteed to support runInTerminal?
+			this.launchStandalone(appArgs, args.cwd);
 
 		if (!this.debug)
 			this.sendEvent(new InitializedEvent());
+	}
+
+	private launchInTerminal(args: string[], cwd: string, env: any) {
+		const termArgs: DebugProtocol.RunInTerminalRequestArguments = {
+			kind: 'integrated',
+			cwd: cwd,
+			args: [this.dartPath].concat(args),
+			env: env
+		};
+
+		this.runInTerminalRequest(termArgs, RUNINTERMINAL_TIMEOUT, response => {
+			if (response.success) {
+				if (this.debug) {
+					// TODO: Fix hard-coded port (randomly generate?)
+					this.initObservatory("http://localhost:8181");
+				}
+				else {
+					this.sendResponse(response);
+				}
+			} else {
+
+				// TODO: This
+				this.sendErrorResponse(response, 123, "Error doing it");
+			}
+		});
 	}
 
 	private launchStandalone(args: string[], cwd: string) {
