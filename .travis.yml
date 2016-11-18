@@ -13,7 +13,6 @@ before_install:
   - nvm install 6
   - dart --version
   - node --version
-  - nodejs --version
   - npm --version
 
 install:
