@@ -1,4 +1,4 @@
-sudo: required
+sudo: false
 
 os:
 #  - osx
@@ -10,8 +10,7 @@ dart:
 
 before_install:
   - if [ $TRAVIS_OS_NAME == "linux" ]; then export CXX="g++-4.9" CC="gcc-4.9" DISPLAY=:99.0; sh -e /etc/init.d/xvfb start; sleep 3; fi
-  - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-  - sudo apt-get install -y nodejs
+  - nvm install 6
   - dart --version
   - node --version
   - nodejs --version
